@@ -3,6 +3,8 @@ const filterDropdownList = document.getElementById("players");
 const sortDropdownList = document.getElementById("sorting");
 
 let clashRoyaleCards = null;
+let playerInventory = {}; // Object to track player's card copies and levels
+let rarityData = null; // Store rarity upgrade requirements
 
 async function loadCardData() {
   try {
@@ -25,10 +27,214 @@ async function loadCardData() {
     }));
 
     Object.freeze(clashRoyaleCards);
+    await CopiesAndUpgrades();
     initializePage();
   } catch (error) {
     console.error('Error loading card data:', error);
     playerCards.innerHTML = '<p class="error">Error loading card data.</p>';
+  }
+}
+
+async function CopiesAndUpgrades() {
+  try {
+    const response = await fetch('./raritylevels.json');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    rarityData = await response.json();
+
+    // Initialize player inventory with default values for each card
+    if (clashRoyaleCards) {
+      clashRoyaleCards.forEach(card => {
+        if (!playerInventory[card.name]) {
+          playerInventory[card.name] = {
+            copies: 1000,
+            level: getStartingLevel(card.rarity),
+            rarity: card.rarity
+          };
+        }
+      });
+    }
+
+    // Load saved inventory from localStorage if available
+    loadPlayerInventory();
+
+  } catch (error) {
+    console.error('Error loading rarity data:', error);
+  }
+}
+
+// Helper function to get starting level based on rarity
+function getStartingLevel(rarity) {
+  const startingLevels = {
+    "Common": 1,
+    "Rare": 3,
+    "Epic": 6,
+    "Legendary": 9,
+    "Champion": 11
+  };
+  return startingLevels[rarity] || 1;
+}
+
+// Function to calculate current level based on copies
+function calculateLevel(cardName) {
+  const card = playerInventory[cardName];
+  if (!card) return getStartingLevel("Common");
+ 
+  const rarity = card.rarity;
+  const copies = card.copies;
+  const upgrades = rarityData.rarityUpgrades[rarity].upgrades;
+  let currentLevel = getStartingLevel(rarity);
+  let usedCopies = 0;
+ 
+  // Find the highest level the player can achieve with current copies
+  for (let level = currentLevel + 1; level <= 14; level++) {
+    if (upgrades[level] && copies >= usedCopies + upgrades[level]) {
+      usedCopies += upgrades[level];
+      currentLevel = level;
+    } else {
+      break;
+    }
+  }
+  return currentLevel;
+}
+
+// Function to calculate remaining copies after leveling up
+function calculateRemainingCopies(cardName) {
+  const card = playerInventory[cardName];
+  if (!card) return 0;
+
+  const rarity = card.rarity;
+  const totalCopies = card.copies;
+  const upgrades = rarityData.rarityUpgrades[rarity].upgrades;
+  const currentLevel = calculateLevel(cardName);
+
+  // Calculate how many copies were used to reach current level
+  let usedCopies = 0;
+  for (let level = getStartingLevel(rarity) + 1; level <= currentLevel; level++) {
+    if (upgrades[level]) {
+      usedCopies += upgrades[level];
+    }
+  }
+
+  return Math.max(0, totalCopies - usedCopies);
+}
+
+// Function to get copies required for next level
+function getCopiesRequiredForNextLevel(cardName) {
+  const card = playerInventory[cardName];
+  if (!card) return 0;
+
+  const rarity = card.rarity;
+  const currentLevel = calculateLevel(cardName);
+  const upgrades = rarityData.rarityUpgrades[rarity].upgrades;
+
+  // If max level, return 0
+  if (currentLevel >= 14) return 0;
+
+  return upgrades[currentLevel + 1] || 0;
+}
+
+// Function to save player inventory to localStorage
+function savePlayerInventory() {
+  localStorage.setItem('clashRoyaleInventory', JSON.stringify(playerInventory));
+}
+
+// Function to load player inventory from localStorage
+function loadPlayerInventory() {
+  const saved = localStorage.getItem('clashRoyaleInventory');
+  if (saved) {
+    try {
+      const loaded = JSON.parse(saved);
+      // Merge with current inventory, keeping defaults for new cards
+      playerInventory = { ...playerInventory, ...loaded };
+    } catch (error) {
+      console.error('Error loading saved inventory:', error);
+    }
+  }
+}
+
+// Function to update card copies (for testing/development)
+function updateCardCopies(cardName, copies) {
+  if (playerInventory[cardName]) {
+    playerInventory[cardName].copies = Math.max(0, copies);
+    savePlayerInventory();
+    applyFilterAndSort(); // Refresh display
+  }
+}
+
+// Function to add copies to a card
+function addCardCopies(cardName, copiesToAdd) {
+  if (playerInventory[cardName]) {
+    playerInventory[cardName].copies += Math.max(0, copiesToAdd);
+    savePlayerInventory();
+    applyFilterAndSort(); // Refresh display
+  }
+}
+
+// Function to reset all cards to 0 copies
+function resetAllCards() {
+  Object.keys(playerInventory).forEach(cardName => {
+    playerInventory[cardName].copies = 0;
+  });
+  savePlayerInventory();
+  applyFilterAndSort();
+}
+
+// Function to get card info for debugging
+function getCardInfo(cardName) {
+  const inventory = playerInventory[cardName];
+  if (!inventory) return null;
+  
+  return {
+    name: cardName,
+    totalCopies: inventory.copies,
+    remainingCopies: calculateRemainingCopies(cardName),
+    level: calculateLevel(cardName),
+    rarity: inventory.rarity,
+    requiredForNext: getCopiesRequiredForNextLevel(cardName)
+  };
+}
+
+// Make functions available globally for testing
+window.updateCardCopies = updateCardCopies;
+window.addCardCopies = addCardCopies;
+window.resetAllCards = resetAllCards;
+window.getCardInfo = getCardInfo;
+
+// Testing functions for the HTML interface
+function testUpdateCard() {
+  const cardName = document.getElementById('test-card-name').value;
+  const copies = parseInt(document.getElementById('test-copies').value) || 0;
+  
+  if (cardName && playerInventory[cardName]) {
+    updateCardCopies(cardName, copies);
+    alert(`Updated ${cardName} to ${copies} copies`);
+  } else {
+    alert('Card not found or invalid input');
+  }
+}
+
+function testAddCopies() {
+  const cardName = document.getElementById('test-card-name').value;
+  const copies = parseInt(document.getElementById('test-copies').value) || 0;
+  
+  if (cardName && playerInventory[cardName]) {
+    addCardCopies(cardName, copies);
+    alert(`Added ${copies} copies to ${cardName}`);
+  } else {
+    alert('Card not found or invalid input');
+  }
+}
+
+function testGetInfo() {
+  const cardName = document.getElementById('test-card-name').value;
+  
+  if (cardName && playerInventory[cardName]) {
+    const info = getCardInfo(cardName);
+    alert(`Card: ${info.name}\nTotal Copies: ${info.totalCopies}\nRemaining Copies: ${info.remainingCopies}\nLevel: ${info.level}\nRarity: ${info.rarity}\nRequired for Next: ${info.requiredForNext}`);
+  } else {
+    alert('Card not found');
   }
 }
 
@@ -57,22 +263,32 @@ function initializePage() {
 
 const setPlayerCards = (arr = []) => {
   playerCards.innerHTML = arr.map(
-    ({ name, type, level, copies, isEvolution, elixirCost, rarity, iconUrl }) => {
+    ({ name, type, isEvolution, elixirCost, rarity, iconUrl }) => {
+      // Get inventory data for this card
+      const inventory = playerInventory[name] || { copies: 0, level: getStartingLevel(rarity) };
+      const currentLevel = calculateLevel(name);
+      const remainingCopies = calculateRemainingCopies(name);
+      const requiredForNext = getCopiesRequiredForNextLevel(name);
+
       return `
-        <div>
-          <div class="player-card ${rarity}">
-            <div class="elixir">${elixirCost}</div>
-            <h2>${isEvolution ? "(Evo)" : ""} ${name}</h2>
-            <img src="${iconUrl}" alt="${name}" class="card-image">
-            <div class="card-bottom-section ${rarity}">
-              <p class="level">Level 15 </p>
+          <div>
+            <div class="player-card ${rarity}">
+              <div class="elixir">${elixirCost}</div>
+              <h2>${isEvolution ? "(Evo)" : ""} ${name}</h2>
+              <img src="${iconUrl}" alt="${name}" class="card-image">
+              <div class="card-bottom-section ${rarity}">
+                <p class="level">Level ${currentLevel}</p>
+              </div>
+            </div>
+            <div class="progress">
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: ${requiredForNext > 0 ? (remainingCopies / requiredForNext) * 100 : 0}%"></div>
+                <p class="progress-text">${remainingCopies}/${requiredForNext}</p>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="progress">
-            <p>9999/9999</p>
-          </div>
-        </div>
-      ` }
+        ` }
   )
     .join("");
 };
@@ -85,9 +301,9 @@ let ascending = true;
 // Combined function to apply both filter and sort
 function applyFilterAndSort() {
   if (!clashRoyaleCards) return;
-  
+
   let filteredCards = [...clashRoyaleCards];
-  
+
   // Apply filter
   switch (currentFilter) {
     case "troop":
@@ -105,7 +321,7 @@ function applyFilterAndSort() {
     default:
       filteredCards = [...clashRoyaleCards];
   }
-  
+
   // Apply sort to filtered cards
   switch (currentSort) {
     case "name":
@@ -135,7 +351,7 @@ function applyFilterAndSort() {
       });
       break;
   }
-  
+
   setPlayerCards(filteredCards);
 }
 

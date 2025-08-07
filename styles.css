@@ -88,12 +88,34 @@ footer {
   width: 300px;
   box-sizing: border-box;
 }
-.progress p {
-  padding: 0.5rem;
+
+.progress-bar-container {
+  position: relative;
   background-color: rgb(33, 33, 66);
   border: 1px solid black;
   border-radius: 15px;
+  height: 40px;
+  overflow: hidden;
 }
+
+.progress-bar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(0deg, #2776ba, #33abf6);
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  padding: 0.5rem;
+  line-height: 28px;
+}
+
 
 .Common {
   background-color: grey;

@@ -16,7 +16,6 @@ async function loadCardData() {
     clashRoyaleCards = data.items.map(card => ({
       name: card.name,
       type: getCardType(card.name), // We'll determine card type based on name or other logic
-      number: card.id,
       isEvolution: card.maxEvolutionLevel > 0,
       elixirCost: card.elixirCost,
       rarity: card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1), // Capitalize first letter

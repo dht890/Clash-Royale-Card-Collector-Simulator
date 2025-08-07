@@ -17,6 +17,7 @@ async function loadCardData() {
     // Extract only the required fields from each card
     clashRoyaleCards = data.items.map(card => ({
       name: card.name,
+      id: card.id,
       type: getCardType(card.name), // We'll determine card type based on name or other logic
       isEvolution: card.maxEvolutionLevel > 0,
       elixirCost: card.elixirCost,
@@ -154,10 +155,17 @@ function loadPlayerInventory() {
   }
 }
 
+// Helper: find the correct card key regardless of case
+function findCardKey(name) {
+  const lower = name.trim().toLowerCase();
+  return Object.keys(playerInventory).find(key => key.toLowerCase() === lower) || null;
+}
+
 // Function to update card copies (for testing/development)
 function updateCardCopies(cardName, copies) {
-  if (playerInventory[cardName]) {
-    playerInventory[cardName].copies = Math.max(0, copies);
+  const key = findCardKey(cardName);
+  if (key) {
+    playerInventory[key].copies = Math.max(0, copies);
     savePlayerInventory();
     applyFilterAndSort(); // Refresh display
   }
@@ -165,8 +173,16 @@ function updateCardCopies(cardName, copies) {
 
 // Function to add copies to a card
 function addCardCopies(cardName, copiesToAdd) {
-  if (playerInventory[cardName]) {
-    playerInventory[cardName].copies += Math.max(0, copiesToAdd);
+  const key = findCardKey(cardName);
+  if (key) {
+    const currentLevel = calculateLevel(key);
+
+    // Don't add copies if already at max level (14)
+    if (currentLevel >= 14) {
+      return; // Exit without adding copies
+    }
+
+    playerInventory[key].copies += Math.max(0, copiesToAdd);
     savePlayerInventory();
     applyFilterAndSort(); // Refresh display
   }
@@ -183,16 +199,18 @@ function resetAllCards() {
 
 // Function to get card info for debugging
 function getCardInfo(cardName) {
-  const inventory = playerInventory[cardName];
-  if (!inventory) return null;
-  
+  const key = findCardKey(cardName);
+  if (!key) return null;
+
+  const inventory = playerInventory[key];
+
   return {
-    name: cardName,
+    name: key,
     totalCopies: inventory.copies,
-    remainingCopies: calculateRemainingCopies(cardName),
-    level: calculateLevel(cardName),
+    remainingCopies: calculateRemainingCopies(key),
+    level: calculateLevel(key),
     rarity: inventory.rarity,
-    requiredForNext: getCopiesRequiredForNextLevel(cardName)
+    requiredForNext: getCopiesRequiredForNextLevel(key)
   };
 }
 
@@ -206,8 +224,8 @@ window.getCardInfo = getCardInfo;
 function testUpdateCard() {
   const cardName = document.getElementById('test-card-name').value;
   const copies = parseInt(document.getElementById('test-copies').value) || 0;
-  
-  if (cardName && playerInventory[cardName]) {
+
+  if (findCardKey(cardName)) {
     updateCardCopies(cardName, copies);
     alert(`Updated ${cardName} to ${copies} copies`);
   } else {
@@ -217,11 +235,10 @@ function testUpdateCard() {
 
 function testAddCopies() {
   const cardName = document.getElementById('test-card-name').value;
-  const copies = parseInt(document.getElementById('test-copies').value) || 0;
-  
-  if (cardName && playerInventory[cardName]) {
+  const copies = parseInt(document.getElementById('test-copies').value) || 1;
+
+  if (findCardKey(cardName)) {
     addCardCopies(cardName, copies);
-    alert(`Added ${copies} copies to ${cardName}`);
   } else {
     alert('Card not found or invalid input');
   }
@@ -229,10 +246,15 @@ function testAddCopies() {
 
 function testGetInfo() {
   const cardName = document.getElementById('test-card-name').value;
-  
-  if (cardName && playerInventory[cardName]) {
+
+  if (findCardKey(cardName)) {
     const info = getCardInfo(cardName);
-    alert(`Card: ${info.name}\nTotal Copies: ${info.totalCopies}\nRemaining Copies: ${info.remainingCopies}\nLevel: ${info.level}\nRarity: ${info.rarity}\nRequired for Next: ${info.requiredForNext}`);
+    alert(`Card: ${info.name}
+Total Copies: ${info.totalCopies}
+Remaining Copies: ${info.remainingCopies}
+Level: ${info.level}
+Rarity: ${info.rarity}
+Required for Next: ${info.requiredForNext}`);
   } else {
     alert('Card not found');
   }
@@ -263,9 +285,7 @@ function initializePage() {
 
 const setPlayerCards = (arr = []) => {
   playerCards.innerHTML = arr.map(
-    ({ name, type, isEvolution, elixirCost, rarity, iconUrl }) => {
-      // Get inventory data for this card
-      const inventory = playerInventory[name] || { copies: 0, level: getStartingLevel(rarity) };
+    ({ name, isEvolution, elixirCost, rarity, iconUrl }) => {
       const currentLevel = calculateLevel(name);
       const remainingCopies = calculateRemainingCopies(name);
       const requiredForNext = getCopiesRequiredForNextLevel(name);
@@ -282,9 +302,12 @@ const setPlayerCards = (arr = []) => {
             </div>
             <div class="progress">
               <div class="progress-bar-container">
-                <div class="progress-bar-fill" style="width: ${requiredForNext > 0 ? (remainingCopies / requiredForNext) * 100 : 0}%"></div>
-                <p class="progress-text">${remainingCopies}/${requiredForNext}</p>
-                </div>
+                ${currentLevel >= 14 ? 
+                  `<div class="progress-bar-fill max-level" style="width: 100%"></div>
+                   <p class="progress-text">MAX</p>` :
+                  `<div class="progress-bar-fill" style="width: ${requiredForNext > 0 ? (remainingCopies / requiredForNext) * 100 : 0}%"></div>
+                   <p class="progress-text">${remainingCopies}/${requiredForNext}</p>`
+                }
               </div>
             </div>
           </div>
@@ -295,7 +318,7 @@ const setPlayerCards = (arr = []) => {
 
 // Global variables to track current filter and sort
 let currentFilter = "all";
-let currentSort = "name";
+let currentSort = "id";
 let ascending = true;
 
 // Combined function to apply both filter and sort
@@ -324,6 +347,12 @@ function applyFilterAndSort() {
 
   // Apply sort to filtered cards
   switch (currentSort) {
+    case "id":
+      filteredCards.sort((a, b) => {
+        const result = a.id - b.id;
+        return ascending ? result : -result;
+      });
+      break;
     case "name":
       filteredCards.sort((a, b) => {
         const result = a.name.localeCompare(b.name);

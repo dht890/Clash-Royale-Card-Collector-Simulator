@@ -108,6 +108,10 @@ footer {
   transition: width 0.3s ease;
 }
 
+.progress-bar-fill.max-level {
+  background: linear-gradient(90deg, #FFD700, #FFA500);
+}
+
 .progress-text {
   position: relative;
   z-index: 2;

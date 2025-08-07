@@ -49,7 +49,7 @@ async function CopiesAndUpgrades() {
       clashRoyaleCards.forEach(card => {
         if (!playerInventory[card.name]) {
           playerInventory[card.name] = {
-            copies: 1000,
+            copies: 0,
             level: getStartingLevel(card.rarity),
             rarity: card.rarity
           };

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      Clash Royale Card Collector Simulator
+    </title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <h1 class="title">"Clash Royale Card Collector Simulator 2.0 for PC + DLC"</h1>
+    <main>
+      <label class="options-label" for="players">Filter Cards:</label>
+      <select name="players" id="players">
+        <option value="all">All Cards</option>
+        <option value="troop">Troop Cards</option>
+        <option value="spell">Spell Cards</option>
+        <option value="building">Building Cards</option>
+        <option value="evolution">Evolution Cards</option>
+      </select>
+      <label class="options-label" for="players">Sort Cards:</label>
+      <select name="sorting" id="sorting">
+        <option value="name">Name</option>
+        <option value="elixir-cost">Elixir Cost</option>
+        <option value="rarity">Rarity</option>
+        <option value="level">Level</option>
+      </select>
+      <button id="sort-direction" onclick="toggleSortDirection()">▲</button>
+      <div class="cards" id="player-cards">
+        <!-- Player cards will be dynamically generated here -->
+      </div>
+    </main>
+    <script src="./script.js"></script>
+  </body>
+</html>

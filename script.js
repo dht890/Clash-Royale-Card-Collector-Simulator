@@ -89,7 +89,7 @@ function calculateLevel(cardName) {
   let usedCopies = 0;
  
   // Find the highest level the player can achieve with current copies
-  for (let level = currentLevel + 1; level <= 14; level++) {
+  for (let level = currentLevel + 1; level <= 15; level++) {
     if (upgrades[level] && copies >= usedCopies + upgrades[level]) {
       usedCopies += upgrades[level];
       currentLevel = level;
@@ -131,7 +131,7 @@ function getCopiesRequiredForNextLevel(cardName) {
   const upgrades = rarityData.rarityUpgrades[rarity].upgrades;
 
   // If max level, return 0
-  if (currentLevel >= 14) return 0;
+  if (currentLevel >= 15) return 0;
 
   return upgrades[currentLevel + 1] || 0;
 }
@@ -178,7 +178,7 @@ function addCardCopies(cardName, copiesToAdd) {
     const currentLevel = calculateLevel(key);
 
     // Don't add copies if already at max level (14)
-    if (currentLevel >= 14) {
+    if (currentLevel >= 15) {
       return; // Exit without adding copies
     }
 
@@ -302,7 +302,7 @@ const setPlayerCards = (arr = []) => {
         </div>
         <div class="progress">
           <div class="progress-bar-container">
-            ${currentLevel >= 14 ? 
+            ${currentLevel >= 15 ? 
               `<div class="progress-bar-fill max-level" style="width: 100%"></div>
               <p class="progress-text">MAX</p>` :
               `<div class="progress-bar-fill" style="width: ${requiredForNext > 0 ? (currentCopies / requiredForNext) * 100 : 0}%"></div>

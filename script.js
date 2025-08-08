@@ -8,7 +8,7 @@ let rarityData = null; // Store rarity upgrade requirements
 
 async function loadCardData() {
   try {
-    const response = await fetch('./clashroyaledb.json');
+    const response = await fetch('./JSON/clashroyaledb.json');
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -38,7 +38,7 @@ async function loadCardData() {
 
 async function CopiesAndUpgrades() {
   try {
-    const response = await fetch('./raritylevels.json');
+    const response = await fetch('./JSON/raritylevels.json');
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -100,8 +100,8 @@ function calculateLevel(cardName) {
   return currentLevel;
 }
 
-// Function to calculate remaining copies after leveling up
-function calculateRemainingCopies(cardName) {
+// Function to calculate current copies after leveling up
+function calculateCurrentCopies(cardName) {
   const card = playerInventory[cardName];
   if (!card) return 0;
 
@@ -207,7 +207,7 @@ function getCardInfo(cardName) {
   return {
     name: key,
     totalCopies: inventory.copies,
-    remainingCopies: calculateRemainingCopies(key),
+    currentCopies: calculateCurrentCopies(key),
     level: calculateLevel(key),
     rarity: inventory.rarity,
     requiredForNext: getCopiesRequiredForNextLevel(key)
@@ -250,10 +250,10 @@ function testGetInfo() {
   if (findCardKey(cardName)) {
     const info = getCardInfo(cardName);
     alert(`Card: ${info.name}
-Total Copies: ${info.totalCopies}
-Remaining Copies: ${info.remainingCopies}
 Level: ${info.level}
 Rarity: ${info.rarity}
+Total Copies: ${info.totalCopies}
+Current Copies: ${info.currentCopies}
 Required for Next: ${info.requiredForNext}`);
   } else {
     alert('Card not found');
@@ -287,32 +287,32 @@ const setPlayerCards = (arr = []) => {
   playerCards.innerHTML = arr.map(
     ({ name, isEvolution, elixirCost, rarity, iconUrl }) => {
       const currentLevel = calculateLevel(name);
-      const remainingCopies = calculateRemainingCopies(name);
+      const currentCopies = calculateCurrentCopies(name);
       const requiredForNext = getCopiesRequiredForNextLevel(name);
 
       return `
-          <div>
-            <div class="player-card ${rarity}">
-              <div class="elixir">${elixirCost}</div>
-              <h2>${isEvolution ? "(Evo)" : ""} ${name}</h2>
-              <img src="${iconUrl}" alt="${name}" class="card-image">
-              <div class="card-bottom-section ${rarity}">
-                <p class="level">Level ${currentLevel}</p>
-              </div>
-            </div>
-            <div class="progress">
-              <div class="progress-bar-container">
-                ${currentLevel >= 14 ? 
-                  `<div class="progress-bar-fill max-level" style="width: 100%"></div>
-                   <p class="progress-text">MAX</p>` :
-                  `<div class="progress-bar-fill" style="width: ${requiredForNext > 0 ? (remainingCopies / requiredForNext) * 100 : 0}%"></div>
-                   <p class="progress-text">${remainingCopies}/${requiredForNext}</p>`
-                }
-              </div>
-            </div>
+      <div class="card-wrapper">
+        <div class="player-card ${rarity}">
+          <div class="elixir">${elixirCost}</div>
+          <h2>${isEvolution ? "(Evo)" : ""} ${name}</h2>
+          <img src="${iconUrl}" alt="${name}" class="card-image">
+          <div class="card-bottom-section ${rarity}">
+            <p class="level">Level ${currentLevel}</p>
           </div>
-        ` }
-  )
+        </div>
+        <div class="progress">
+          <div class="progress-bar-container">
+            ${currentLevel >= 14 ? 
+              `<div class="progress-bar-fill max-level" style="width: 100%"></div>
+              <p class="progress-text">MAX</p>` :
+              `<div class="progress-bar-fill" style="width: ${requiredForNext > 0 ? (currentCopies / requiredForNext) * 100 : 0}%"></div>
+              <p class="progress-text">${currentCopies}/${requiredForNext}</p>`}
+          </div>
+        </div>
+      </div>
+    `;
+
+  })
     .join("");
 };
 

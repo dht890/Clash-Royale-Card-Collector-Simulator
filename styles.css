@@ -29,8 +29,7 @@ body {
 
 .title,
 .options-label,
-.team-stats,
-footer {
+.team-stats {
   color: var(--white);
 }
 
@@ -58,6 +57,13 @@ footer {
 
 #sort-direction:hover {
   background-color: #2c3e50;
+}
+
+.card-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .cards {
@@ -119,7 +125,6 @@ footer {
   padding: 0.5rem;
   line-height: 28px;
 }
-
 
 .Common {
   background-color: grey;
@@ -213,11 +218,22 @@ footer {
   text-align: center;
 }
 
-@media (max-width: 768px) {
-  .team-stats {
-    flex-direction: column;
+@media (max-width: 750px) {
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Two equal columns */
+    
+  }
+
+  .player-card {
+    font-size: 0.5rem;
+    width: 90%;
+  }
+  .progress {
+    width: 90%;
   }
 }
+
 
 @font-face {
   font-family: 'Supercell Magic';

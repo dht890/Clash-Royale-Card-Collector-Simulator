@@ -1,3 +1,5 @@
+import { inject } from "@vercel/analytics"
+inject();
 const playerCards = document.getElementById("player-cards");
 const filterDropdownList = document.getElementById("players");
 const sortDropdownList = document.getElementById("sorting");
@@ -177,7 +179,7 @@ function addCardCopies(cardName, copiesToAdd) {
   if (key) {
     const currentLevel = calculateLevel(key);
 
-    // Don't add copies if already at max level (14)
+    // Don't add copies if already at max level (15)
     if (currentLevel >= 15) {
       return; // Exit without adding copies
     }

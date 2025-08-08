@@ -1,5 +1,3 @@
-import { inject } from "@vercel/analytics"
-inject();
 const playerCards = document.getElementById("player-cards");
 const filterDropdownList = document.getElementById("players");
 const sortDropdownList = document.getElementById("sorting");

@@ -335,7 +335,7 @@ const setPlayerCards = (arr = []) => {
   });
 
   playerCards.innerHTML = sortedArr.map(
-    ({ name, isEvolution, elixirCost, rarity, iconUrl }) => {
+    ({ name, isEvolution, elixirCost, rarity, iconUrl, id }) => {
       const locked = calculateLevel(name) === 0;
       const currentLevel = calculateLevel(name);
       const currentCopies = calculateCurrentCopies(name);
@@ -348,7 +348,7 @@ const setPlayerCards = (arr = []) => {
             <h2>${isEvolution ? "(Evo)" : ""} ${name}</h2>
             <img src="${iconUrl}" alt="${name}" class="card-image">
               <div class="card-bottom-section ${rarity}">
-                <p class="level">Level ${currentLevel}</p>
+                <p class="level">${currentLevel === 0 ? "Locked" : `Level: ${currentLevel}`}</p>
               </div>
           </div>
             <div class="progress">
@@ -416,35 +416,56 @@ function applyFilterAndSort() {
 
     // Now sort based on currentSort
     let result = 0;
+    let levelA = calculateLevel(a.name);
+    let levelB = calculateLevel(b.name);
 
     switch (currentSort) {
-      case "id":
-        result = a.id - b.id;
-        break;
-      case "name":
-        result = a.name.localeCompare(b.name);
-        break;
-      case "elixir-cost":
-        result = a.elixirCost - b.elixirCost;
-        break;
-      case "rarity":
-        const rarityOrder = { "Common": 1, "Rare": 2, "Epic": 3, "Legendary": 4, "Champion": 5 };
-        result = rarityOrder[a.rarity] - rarityOrder[b.rarity];
-        break;
       case "level":
-        const levelA = calculateLevel(a.name);
-        const levelB = calculateLevel(b.name);
-
         if (levelA === 0 && levelB === 0) {
-          // All locked — sort by name instead
+          // All locked — sort by id instead
           result = a.id - b.id;
         } else if (levelA !== levelB) {
           result = levelB - levelA; // Higher levels first
         } else {
-          result = a.id - b.id;
+          result = levelB - levelA; // Higher levels first
         }
         break;
-
+      case "name":
+        if (levelA === 0 && levelB === 0){
+          result = a.id - b.id;
+        } else if (levelA !== levelB) {
+          result = a.name.localeCompare(b.name);
+        } else {
+          result = a.name.localeCompare(b.name);
+        }
+        break;
+      case "elixir-cost":
+        result = a.elixirCost - b.elixirCost;
+        if (levelA === 0 && levelB === 0){
+          result = a.id - b.id;
+        } else if (levelA !== levelB) {
+          result = a.elixirCost - b.elixirCost;
+        } else {
+          result = a.elixirCost - b.elixirCost;
+        }
+        break;
+      case "rarity":
+        const rarityOrder = { "Common": 1, "Rare": 2, "Epic": 3, "Legendary": 4, "Champion": 5 };
+        if (levelA === 0 && levelB === 0) {
+          result = a.id - b.id;
+        } else if (levelA !== levelB) {
+          result = rarityOrder[a.rarity] - rarityOrder[b.rarity];
+        } else {
+          result = rarityOrder[a.rarity] - rarityOrder[b.rarity];
+        }
+        break;
+      case "id":
+        if (levelA === 0 && levelB === 0) {
+          result = a.id - b.id;
+        } else if (levelA !== levelB) {
+          result = levelB - levelA;
+        }
+        break;
     }
 
     return ascending ? result : -result;

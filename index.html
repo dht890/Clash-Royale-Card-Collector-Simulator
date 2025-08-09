@@ -7,6 +7,7 @@
     <title>
       Clash Royale Card Collector Simulator
     </title>
+    <link rel="icon" type="image/x-icon" href="./assets/crown.png"></link>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -22,21 +23,22 @@
       </select>
       <label class="options-label" for="players">Sort Cards:</label>
       <select name="sorting" id="sorting">
-        <option value="id">ID</option>
+        <option value="level">Level</option>
         <option value="name">Name</option>
         <option value="elixir-cost">Elixir Cost</option>
         <option value="rarity">Rarity</option>
-        <option value="level">Level</option>
+        <option value="id">ID</option>
       </select>
       <button id="sort-direction" onclick="toggleSortDirection()">▲</button>
       
       <!-- Testing Interface -->
       <div style="margin: 20px; padding: 15px; background-color: rgba(255,255,255,0.1); border-radius: 10px;">
         <h3>Testing Interface</h3>
+        <button onclick="testRandomCopies()" style="margin: 5px; padding: 5px;">?</button>
         <input type="text" id="test-card-name" placeholder="Card name (e.g., 'Giant')" style="margin: 5px; padding: 5px;">
         <input type="number" id="test-copies" placeholder="1" style="margin: 5px; padding: 5px; width: 80px;">
         <button onclick="testAddCopies()" style="margin: 5px; padding: 5px;">Add Copies</button>
-        <button onclick="testUpdateCard()" style="margin: 5px; padding: 5px;">Update Copies</button>
+        <button onclick="testUpdateCard()" style="margin: 5px; padding: 5px;">Unlock All</button>
         <button onclick="resetAllCards()" style="margin: 5px; padding: 5px; background-color: #e74c3c;">Reset All</button>
         <button onclick="testGetInfo()" style="margin: 5px; padding: 5px;">Get Card Info</button>
       </div>

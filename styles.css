@@ -218,6 +218,11 @@ body {
   text-align: center;
 }
 
+.player-card.locked {
+  filter: grayscale(100%);
+  position: relative;
+}
+
 @media (max-width: 750px) {
   .cards {
     display: grid;

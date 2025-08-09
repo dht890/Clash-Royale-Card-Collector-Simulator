@@ -36,6 +36,12 @@ async function loadCardData() {
   }
 }
 
+function initializeLockedStatus() {
+  Object.keys(playerInventory).forEach(cardName => {
+    playerInventory[cardName].locked = (playerInventory[cardName].copies <= 0);
+  });
+}
+
 async function CopiesAndUpgrades() {
   try {
     const response = await fetch('./JSON/raritylevels.json');
@@ -59,7 +65,8 @@ async function CopiesAndUpgrades() {
 
     // Load saved inventory from localStorage if available
     loadPlayerInventory();
-
+    initializeLockedStatus();
+  
   } catch (error) {
     console.error('Error loading rarity data:', error);
   }
@@ -323,6 +330,7 @@ function getCardType(cardName) {
 }
 
 function initializePage() {
+  resetAllCards();
   setPlayerCards(clashRoyaleCards);
 }
 
@@ -427,11 +435,11 @@ function applyFilterAndSort() {
         } else if (levelA !== levelB) {
           result = levelB - levelA; // Higher levels first
         } else {
-          result = levelB - levelA; // Higher levels first
+          result = a.id - b.id;
         }
         break;
       case "name":
-        if (levelA === 0 && levelB === 0){
+        if (levelA === 0 && levelB === 0) {
           result = a.id - b.id;
         } else if (levelA !== levelB) {
           result = a.name.localeCompare(b.name);
@@ -441,7 +449,7 @@ function applyFilterAndSort() {
         break;
       case "elixir-cost":
         result = a.elixirCost - b.elixirCost;
-        if (levelA === 0 && levelB === 0){
+        if (levelA === 0 && levelB === 0) {
           result = a.id - b.id;
         } else if (levelA !== levelB) {
           result = a.elixirCost - b.elixirCost;

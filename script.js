@@ -330,7 +330,6 @@ function getCardType(cardName) {
 }
 
 function initializePage() {
-  resetAllCards();
   setPlayerCards(clashRoyaleCards);
 }
 

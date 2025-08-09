@@ -50,8 +50,8 @@ async function CopiesAndUpgrades() {
         if (!playerInventory[card.name]) {
           playerInventory[card.name] = {
             copies: 0,
-            level: getStartingLevel(card.rarity),
-            rarity: card.rarity
+            level: 0,
+            rarity: card.rarity,
           };
         }
       });
@@ -80,15 +80,14 @@ function getStartingLevel(rarity) {
 // Function to calculate current level based on copies
 function calculateLevel(cardName) {
   const card = playerInventory[cardName];
-  if (!card) return getStartingLevel("Common");
- 
+  if (!card || card.copies <= 0) return 0; // Level 0 = locked
+
   const rarity = card.rarity;
   const copies = card.copies;
   const upgrades = rarityData.rarityUpgrades[rarity].upgrades;
   let currentLevel = getStartingLevel(rarity);
   let usedCopies = 0;
- 
-  // Find the highest level the player can achieve with current copies
+
   for (let level = currentLevel + 1; level <= 15; level++) {
     if (upgrades[level] && copies >= usedCopies + upgrades[level]) {
       usedCopies += upgrades[level];
@@ -99,6 +98,7 @@ function calculateLevel(cardName) {
   }
   return currentLevel;
 }
+
 
 // Function to calculate current copies after leveling up
 function calculateCurrentCopies(cardName) {
@@ -166,6 +166,7 @@ function updateCardCopies(cardName, copies) {
   const key = findCardKey(cardName);
   if (key) {
     playerInventory[key].copies = Math.max(0, copies);
+    playerInventory[key].locked = playerInventory[key].copies <= 0;
     savePlayerInventory();
     applyFilterAndSort(); // Refresh display
   }
@@ -183,6 +184,7 @@ function addCardCopies(cardName, copiesToAdd) {
     }
 
     playerInventory[key].copies += Math.max(0, copiesToAdd);
+    playerInventory[key].locked = playerInventory[key].copies <= 0;
     savePlayerInventory();
     applyFilterAndSort(); // Refresh display
   }
@@ -192,6 +194,8 @@ function addCardCopies(cardName, copiesToAdd) {
 function resetAllCards() {
   Object.keys(playerInventory).forEach(cardName => {
     playerInventory[cardName].copies = 0;
+    playerInventory[cardName].level = 0;
+    playerInventory[cardName].locked = true;
   });
   savePlayerInventory();
   applyFilterAndSort();
@@ -222,15 +226,9 @@ window.getCardInfo = getCardInfo;
 
 // Testing functions for the HTML interface
 function testUpdateCard() {
-  const cardName = document.getElementById('test-card-name').value;
-  const copies = parseInt(document.getElementById('test-copies').value) || 0;
-
-  if (findCardKey(cardName)) {
-    updateCardCopies(cardName, copies);
-    alert(`Updated ${cardName} to ${copies} copies`);
-  } else {
-    alert('Card not found or invalid input');
-  }
+  Object.keys(playerInventory).forEach(cardName => {
+    updateCardCopies(cardName, 1)
+  })
 }
 
 function testAddCopies() {
@@ -243,6 +241,51 @@ function testAddCopies() {
     alert('Card not found or invalid input');
   }
 }
+
+function testRandomCopies() {
+  // Rarity appearance weights (probability of getting this rarity)
+  const rarityWeights = {
+    "Common": 50,
+    "Rare": 30,
+    "Epic": 15,
+    "Legendary": 5,
+    "Champion": 1
+  };
+
+  // Rarity copy ranges (how many copies to give)
+  const rarityCopyRanges = {
+    "Common": [5, 50],      // Min 5, Max 50
+    "Rare": [3, 20],        // Min 3, Max 20
+    "Epic": [1, 5],         // Min 1, Max 5
+    "Legendary": [1, 2],    // Min 1, Max 2
+    "Champion": [1, 1]      // Always 1
+  };
+
+  // Build weighted pool of cards based on rarity
+  const pool = [];
+  for (const cardName of Object.keys(playerInventory)) {
+    const rarity = playerInventory[cardName].rarity;
+    const weight = rarityWeights[rarity] || 1;
+    for (let i = 0; i < weight; i++) {
+      pool.push(cardName);
+    }
+  }
+
+  // Pick random card from weighted pool
+  const randomCard = pool[Math.floor(Math.random() * pool.length)];
+  const rarity = playerInventory[randomCard].rarity;
+
+  // Determine copies based on rarity's range
+  const [minCopies, maxCopies] = rarityCopyRanges[rarity] || [1, 1];
+  const randomCopies = Math.floor(Math.random() * (maxCopies - minCopies + 1)) + minCopies;
+
+  // Add the copies
+  addCardCopies(randomCard, randomCopies);
+
+  // Optional: Show alert
+  alert(`Added ${randomCopies} copies to ${randomCard} (${rarity})`);
+}
+
 
 function testGetInfo() {
   const cardName = document.getElementById('test-card-name').value;
@@ -284,102 +327,128 @@ function initializePage() {
 }
 
 const setPlayerCards = (arr = []) => {
-  playerCards.innerHTML = arr.map(
+  // Optionally move locked cards to the end
+  const sortedArr = [...arr].sort((a, b) => {
+    const lockedA = playerInventory[a.name]?.locked;
+    const lockedB = playerInventory[b.name]?.locked;
+    return lockedA === lockedB ? 0 : lockedB ? -1 : 1;
+  });
+
+  playerCards.innerHTML = sortedArr.map(
     ({ name, isEvolution, elixirCost, rarity, iconUrl }) => {
+      const locked = calculateLevel(name) === 0;
       const currentLevel = calculateLevel(name);
       const currentCopies = calculateCurrentCopies(name);
       const requiredForNext = getCopiesRequiredForNextLevel(name);
 
       return `
-      <div class="card-wrapper">
-        <div class="player-card ${rarity}">
-          <div class="elixir">${elixirCost}</div>
-          <h2>${isEvolution ? "(Evo)" : ""} ${name}</h2>
-          <img src="${iconUrl}" alt="${name}" class="card-image">
-          <div class="card-bottom-section ${rarity}">
-            <p class="level">Level ${currentLevel}</p>
+        <div class="card-wrapper">
+          <div class="player-card ${rarity} ${locked ? 'locked' : ''}">
+            <div class="elixir">${elixirCost}</div>
+            <h2>${isEvolution ? "(Evo)" : ""} ${name}</h2>
+            <img src="${iconUrl}" alt="${name}" class="card-image">
+              <div class="card-bottom-section ${rarity}">
+                <p class="level">Level ${currentLevel}</p>
+              </div>
           </div>
+            <div class="progress">
+              <div class="progress-bar-container">
+                ${currentLevel >= 15 ?
+          `<div class="progress-bar-fill max-level" style="width: 100%"></div>
+                  <p class="progress-text">MAX</p>` :
+          `<div class="progress-bar-fill" style="width: ${requiredForNext > 0 ? (currentCopies / requiredForNext) * 100 : 0}%"></div>
+                  <p class="progress-text">${currentCopies}/${requiredForNext}</p>`
+        }
+              </div>
+            </div>
         </div>
-        <div class="progress">
-          <div class="progress-bar-container">
-            ${currentLevel >= 15 ? 
-              `<div class="progress-bar-fill max-level" style="width: 100%"></div>
-              <p class="progress-text">MAX</p>` :
-              `<div class="progress-bar-fill" style="width: ${requiredForNext > 0 ? (currentCopies / requiredForNext) * 100 : 0}%"></div>
-              <p class="progress-text">${currentCopies}/${requiredForNext}</p>`}
-          </div>
-        </div>
-      </div>
-    `;
-
-  })
-    .join("");
+      `;
+    }
+  ).join("");
 };
+
 
 // Global variables to track current filter and sort
 let currentFilter = "all";
-let currentSort = "id";
+let currentSort = "level";
 let ascending = true;
 
 // Combined function to apply both filter and sort
 function applyFilterAndSort() {
   if (!clashRoyaleCards) return;
 
-  let filteredCards = [...clashRoyaleCards];
+  let filteredCards = [...clashRoyaleCards]
 
   // Apply filter
   switch (currentFilter) {
     case "troop":
-      filteredCards = clashRoyaleCards.filter((player) => player.type === "Troop");
+      filteredCards = filteredCards.filter((player) => player.type === "Troop");
       break;
     case "spell":
-      filteredCards = clashRoyaleCards.filter((player) => player.type === "Spell");
+      filteredCards = filteredCards.filter((player) => player.type === "Spell");
       break;
     case "building":
-      filteredCards = clashRoyaleCards.filter((player) => player.type === "Building");
+      filteredCards = filteredCards.filter((player) => player.type === "Building");
       break;
     case "evolution":
-      filteredCards = clashRoyaleCards.filter((player) => player.isEvolution === true);
+      filteredCards = filteredCards.filter((player) => player.isEvolution === true);
+      break;
+    case "locked":
+      filteredCards = filteredCards.filter(card => playerInventory[card.name]?.locked);
+      break;
+    case "unlocked":
+      filteredCards = filteredCards.filter(card => !playerInventory[card.name]?.locked);
       break;
     default:
-      filteredCards = [...clashRoyaleCards];
+      // "all"
+      break;
   }
 
-  // Apply sort to filtered cards
-  switch (currentSort) {
-    case "id":
-      filteredCards.sort((a, b) => {
-        const result = a.id - b.id;
-        return ascending ? result : -result;
-      });
-      break;
-    case "name":
-      filteredCards.sort((a, b) => {
-        const result = a.name.localeCompare(b.name);
-        return ascending ? result : -result;
-      });
-      break;
-    case "elixir-cost":
-      filteredCards.sort((a, b) => {
-        const result = a.elixirCost - b.elixirCost;
-        return ascending ? result : -result;
-      });
-      break;
-    case "rarity":
-      const rarityOrder = { "Common": 1, "Rare": 2, "Epic": 3, "Legendary": 4, "Champion": 5 };
-      filteredCards.sort((a, b) => {
-        const result = rarityOrder[a.rarity] - rarityOrder[b.rarity];
-        return ascending ? result : -result;
-      });
-      break;
-    case "level":
-      // Since all cards are level 15, this will maintain current order
-      filteredCards.sort((a, b) => {
-        const result = a.name.localeCompare(b.name);
-        return ascending ? result : -result;
-      });
-      break;
-  }
+  // Apply sort
+  filteredCards.sort((a, b) => {
+    const lockedA = playerInventory[a.name]?.locked;
+    const lockedB = playerInventory[b.name]?.locked;
+
+    // Always prioritize unlocked first
+    if (lockedA !== lockedB) {
+      return lockedA ? 1 : -1;
+    }
+
+    // Now sort based on currentSort
+    let result = 0;
+
+    switch (currentSort) {
+      case "id":
+        result = a.id - b.id;
+        break;
+      case "name":
+        result = a.name.localeCompare(b.name);
+        break;
+      case "elixir-cost":
+        result = a.elixirCost - b.elixirCost;
+        break;
+      case "rarity":
+        const rarityOrder = { "Common": 1, "Rare": 2, "Epic": 3, "Legendary": 4, "Champion": 5 };
+        result = rarityOrder[a.rarity] - rarityOrder[b.rarity];
+        break;
+      case "level":
+        const levelA = calculateLevel(a.name);
+        const levelB = calculateLevel(b.name);
+
+        if (levelA === 0 && levelB === 0) {
+          // All locked — sort by name instead
+          result = a.id - b.id;
+        } else if (levelA !== levelB) {
+          result = levelB - levelA; // Higher levels first
+        } else {
+          result = a.id - b.id;
+        }
+        break;
+
+    }
+
+    return ascending ? result : -result;
+  });
 
   setPlayerCards(filteredCards);
 }
